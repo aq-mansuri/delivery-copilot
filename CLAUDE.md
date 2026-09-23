@@ -123,11 +123,16 @@ Offline, findings come from the sandbox tenant in `app/core/sandbox.py`. Set
 `JIRA_PROJECT_KEYS` to sync a real one; the two are never mixed, and a failed
 live sync serves no findings rather than falling back to invented ones.
 
-Documentation is always the bundled corpus — `ConfluenceClient` is written and
-tested but not wired in. `/health` reports it, along with which writer is loaded
-and whether the evaluation clock has been shifted. Anything the UI shows must
-distinguish what was recorded from what was done: `applied` means "the writer
-returned", never "Jira changed".
+Documentation is the bundled corpus by default. Set `CONFLUENCE_SPACE_KEYS` to
+index a real one — same shared credentials as Jira, independently scoped, same
+never-mixed rule: a load that fails completely serves no documentation rather
+than falling back to the sample pages. Unlike Jira, a *partial* load (one space
+unreadable, others fine) still indexes what it got — see ADR-010 for why a
+smaller real corpus isn't the same danger as a smaller real risk-finding set.
+`/health` reports `docs_source`, along with which writer is loaded and whether
+the evaluation clock has been shifted. Anything the UI shows must distinguish
+what was recorded from what was done: `applied` means "the writer returned",
+never "Jira changed".
 
 `JiraIssueWriter` is the only code that mutates a tenant. It needs credentials,
 project keys AND `JIRA_ALLOW_WRITES` — credentials alone never imply permission.

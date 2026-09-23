@@ -32,6 +32,8 @@ class Settings:
     jira_target_release_field: str = ""
     jira_project_keys: tuple[str, ...] = ()
     jira_allow_writes: bool = False
+    confluence_space_keys: tuple[str, ...] = ()
+    confluence_labels: tuple[str, ...] = ()
     risk_clock_offset_days: int = 0
 
     @property
@@ -53,6 +55,23 @@ class Settings:
             and self.atlassian_email
             and self.atlassian_api_token
             and self.jira_project_keys
+        )
+
+    @property
+    def has_confluence(self) -> bool:
+        """Enough to load real documentation at startup.
+
+        Same shape as `has_jira`, and deliberately independent of it. Space
+        keys are part of it, not an optional extra — the same reasoning as
+        Jira's project keys: without them there is nothing to select, and a
+        tenant configured to read Jira must not silently start reading
+        Confluence too just because the same credentials would work there.
+        """
+        return bool(
+            self.atlassian_base_url
+            and self.atlassian_email
+            and self.atlassian_api_token
+            and self.confluence_space_keys
         )
 
     @property
@@ -86,6 +105,16 @@ def _keys(raw: str) -> tuple[str, ...]:
     rather than about the config.
     """
     return tuple(key.strip().upper() for key in raw.split(",") if key.strip())
+
+
+def _labels(raw: str) -> tuple[str, ...]:
+    """Parse CONFLUENCE_LABELS=architecture,compliance.
+
+    No case change, unlike `_keys`. Confluence labels are lowercase-with-
+    hyphens by convention and the label filter is case-sensitive — folding
+    case the way a Jira project key is would silently match nothing.
+    """
+    return tuple(label.strip() for label in raw.split(",") if label.strip())
 
 
 # Only these count as permission. `bool(os.getenv(...))` would read "false" and
@@ -146,6 +175,8 @@ def settings() -> Settings:
         jira_target_release_field=os.getenv("JIRA_TARGET_RELEASE_FIELD", ""),
         jira_project_keys=_keys(os.getenv("JIRA_PROJECT_KEYS", "")),
         jira_allow_writes=_flag(os.getenv("JIRA_ALLOW_WRITES", "")),
+        confluence_space_keys=_keys(os.getenv("CONFLUENCE_SPACE_KEYS", "")),
+        confluence_labels=_labels(os.getenv("CONFLUENCE_LABELS", "")),
         risk_clock_offset_days=_offset(os.getenv("RISK_CLOCK_OFFSET_DAYS", "")),
     )
 

@@ -539,9 +539,14 @@ class TestProposalListing:
 
 
 class TestDefaultWriterIsSafe:
-    def test_default_writer_does_not_touch_jira(self):
+    def test_default_writer_does_not_touch_jira(self, clean_env):
         """A service that can write to a client tenant the moment it boots is a
-        service that writes to a client tenant by accident."""
+        service that writes to a client tenant by accident.
+
+        `clean_env`, not decoration: `build_services()` reads real settings,
+        and a machine with `JIRA_ALLOW_WRITES=1` in its own `.env` — this one,
+        once real writes were verified against a live tenant — makes this
+        assertion false for a reason that has nothing to do with the code."""
         from app.api.main import build_services
 
         assert isinstance(build_services().writer, LoggingWriter)
@@ -725,6 +730,36 @@ class TestHealthDescribesBothHalvesOfTheData:
         with client(make_services()) as c:
             body = c.get("/health").json()
         assert body["docs_source"] == "bundled_corpus"
+        assert body["docs_message"] == ""
+
+    def test_a_real_confluence_load_is_reported(self):
+        services = make_services()
+        services.docs_source = "confluence"
+        with client(services) as c:
+            body = c.get("/health").json()
+        assert body["docs_source"] == "confluence"
+
+    def test_partial_confluence_coverage_is_reported(self):
+        """One space unreachable does not read the same as full coverage —
+        the same distinction `sync_message` already makes for Jira."""
+        services = make_services()
+        services.docs_source = "confluence_partial"
+        services.docs_message = "Could not read COMP; some documentation may be missing."
+        with client(services) as c:
+            body = c.get("/health").json()
+        assert body["docs_source"] == "confluence_partial"
+        assert "COMP" in body["docs_message"]
+
+    def test_total_confluence_failure_is_reported_distinctly_from_bundled_corpus(self):
+        """A tenant that asked for real Confluence and got nothing must not
+        read the same as one that never configured it — the first is a gap to
+        fix, the second is the documented default."""
+        services = make_services()
+        services.docs_source = "confluence_unavailable"
+        with client(services) as c:
+            body = c.get("/health").json()
+        assert body["docs_source"] == "confluence_unavailable"
+        assert body["docs_source"] != "bundled_corpus"
 
 
 @pytest.fixture
@@ -745,11 +780,95 @@ def clean_env(monkeypatch):
     for name in (
         "ATLASSIAN_BASE_URL", "ATLASSIAN_EMAIL", "ATLASSIAN_API_TOKEN",
         "JIRA_PROJECT_KEYS", "JIRA_ALLOW_WRITES",
+        "CONFLUENCE_SPACE_KEYS", "CONFLUENCE_LABELS",
     ):
         monkeypatch.delenv(name, raising=False)
     config.settings.cache_clear()
     yield monkeypatch
     config.settings.cache_clear()
+
+
+class TestConfluenceIsOptIn:
+    """Same shape as `TestRealWritesAreOptInOnly`: shared Atlassian credentials
+    are necessary but never sufficient on their own. `JIRA_PROJECT_KEYS` scopes
+    which Jira projects are read; `CONFLUENCE_SPACE_KEYS` is the same kind of
+    explicit scope for documentation, and the two are independent — a tenant
+    read for Jira must not silently start reading Confluence too."""
+
+    def test_credentials_alone_do_not_enable_confluence(self, clean_env):
+        from app.core import config
+
+        for key, value in {
+            "ATLASSIAN_BASE_URL": "https://acme.atlassian.net",
+            "ATLASSIAN_EMAIL": "svc@acme.com",
+            "ATLASSIAN_API_TOKEN": "tok",
+        }.items():
+            clean_env.setenv(key, value)
+        config.settings.cache_clear()
+        assert config.settings().has_confluence is False
+
+    def test_space_keys_alone_do_not_enable_confluence(self, clean_env):
+        from app.core import config
+
+        clean_env.setenv("CONFLUENCE_SPACE_KEYS", "ARCH")
+        config.settings.cache_clear()
+        assert config.settings().has_confluence is False
+
+    def test_credentials_and_space_keys_together_enable_confluence(self, clean_env):
+        from app.core import config
+
+        for key, value in {
+            "ATLASSIAN_BASE_URL": "https://acme.atlassian.net",
+            "ATLASSIAN_EMAIL": "svc@acme.com",
+            "ATLASSIAN_API_TOKEN": "tok",
+            "CONFLUENCE_SPACE_KEYS": "ARCH",
+        }.items():
+            clean_env.setenv(key, value)
+        config.settings.cache_clear()
+        assert config.settings().has_confluence is True
+
+    def test_jira_and_confluence_are_independently_scoped(self, clean_env):
+        """The dangerous near-miss in the other direction: a tenant configured
+        to read Jira must not automatically start reading Confluence, and
+        vice versa."""
+        from app.core import config
+
+        for key, value in {
+            "ATLASSIAN_BASE_URL": "https://acme.atlassian.net",
+            "ATLASSIAN_EMAIL": "svc@acme.com",
+            "ATLASSIAN_API_TOKEN": "tok",
+            "JIRA_PROJECT_KEYS": "INS",
+        }.items():
+            clean_env.setenv(key, value)
+        config.settings.cache_clear()
+        assert config.settings().has_jira is True
+        assert config.settings().has_confluence is False
+
+    def test_space_keys_are_parsed_like_project_keys(self, clean_env):
+        from app.core import config
+
+        clean_env.setenv("CONFLUENCE_SPACE_KEYS", " arch, compliance ,,")
+        config.settings.cache_clear()
+        assert config.settings().confluence_space_keys == ("ARCH", "COMPLIANCE")
+
+    def test_labels_are_parsed_without_case_folding(self, clean_env):
+        """Unlike space keys, Confluence labels are lowercase-with-hyphens by
+        convention and the API's label filter is case-sensitive — uppercasing
+        them the way project keys are would silently match nothing."""
+        from app.core import config
+
+        clean_env.setenv("CONFLUENCE_LABELS", " architecture, Compliance-Sign-Off ,,")
+        config.settings.cache_clear()
+        assert config.settings().confluence_labels == (
+            "architecture", "Compliance-Sign-Off",
+        )
+
+    def test_labels_are_optional(self, clean_env):
+        from app.core import config
+
+        clean_env.setenv("CONFLUENCE_SPACE_KEYS", "ARCH")
+        config.settings.cache_clear()
+        assert config.settings().confluence_labels == ()
 
 
 class TestRealWritesAreOptInOnly:
@@ -956,3 +1075,55 @@ class TestResync:
         assert response.status_code == 503
         assert "jira unreachable" in response.json()["detail"]
         assert services.sync is original
+
+
+class TestConfluenceLoadNeverFallsBackToTheBundledCorpus:
+    """The load-bearing guarantee of wiring Confluence in at all: a live load
+    that fails completely must serve NO documentation rather than silently
+    keep answering from the bundled sample pages. Mixing the two is worse
+    than either alone — a client reading their own live Jira findings next to
+    invented Confluence answers has no way to tell the difference, and it is
+    the harder failure to notice precisely because the Jira half is real."""
+
+    async def test_total_failure_empties_the_index_rather_than_keeping_it(
+        self, clean_env, monkeypatch
+    ):
+        from app.core import config
+
+        for key, value in {
+            "ATLASSIAN_BASE_URL": "https://acme.atlassian.net",
+            "ATLASSIAN_EMAIL": "svc@acme.com",
+            "ATLASSIAN_API_TOKEN": "tok",
+            "CONFLUENCE_SPACE_KEYS": "ARCH",
+        }.items():
+            clean_env.setenv(key, value)
+        config.settings.cache_clear()
+
+        import app.api.main as main
+        from app.integrations.atlassian.confluence import ConfluenceError
+
+        class BoomingClient:
+            def __init__(self, **kwargs):
+                pass
+
+            async def iter_pages(self, space_key, *, labels=None):
+                raise ConfluenceError("403 on ARCH")
+                yield  # pragma: no cover - makes this an async generator
+
+            async def aclose(self):
+                pass
+
+        monkeypatch.setattr(
+            "app.integrations.atlassian.confluence.ConfluenceClient", BoomingClient
+        )
+
+        services = make_services()
+        # The bundled corpus's own chunk, still present before the load —
+        # this is what must NOT still be there afterward.
+        assert services.retriever.chunks
+
+        await main.load_live_docs(services)
+
+        assert services.docs_source == "confluence_unavailable"
+        assert services.retriever.chunks == []
+        assert services.retriever.search("Mutual TLS") == []

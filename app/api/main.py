@@ -137,6 +137,12 @@ class Services:
     # "sandbox" or "jira". Surfaced on /health because a lead looking at
     # INS-101 needs to know whether it is their tenant or the demo one.
     findings_source: str = "sandbox"
+    # "bundled_corpus", "confluence", "confluence_partial" or
+    # "confluence_unavailable" — see `load_live_docs`. Independent of
+    # `findings_source`: a tenant read for Jira does not imply Confluence was
+    # ever configured, let alone that it loaded cleanly.
+    docs_source: str = "bundled_corpus"
+    docs_message: str = ""
 
     @property
     def synced_at(self) -> datetime:
@@ -246,6 +252,7 @@ def build_services() -> Services:
         sync=sync,
         writer=_build_writer(config),
         findings_source="sandbox",
+        docs_source="bundled_corpus",
     )
 
 
@@ -321,6 +328,84 @@ async def load_live_findings(services: Services) -> None:
         )
     else:
         logger.warning("%s", sync.operator_message())
+
+
+async def load_live_docs(services: Services) -> None:
+    """Replace the bundled sample corpus with real Confluence pages.
+
+    Same rule as `load_live_findings`, applied to the other half of the data:
+    a failed live load must not fall back to the bundled corpus. A client
+    reading their own live Jira findings next to invented Confluence answers
+    is the same failure as the reverse — indistinguishable from the real
+    thing to whoever is reading it, and the harder of the two to notice,
+    because the Jira half being real is what makes the whole page look
+    trustworthy.
+
+    Unlike Jira, a partial result still gets indexed rather than discarded.
+    `run_docs_load`'s docstring has the reasoning: a smaller real corpus is
+    not dangerous the way a smaller real risk-finding set is, because `/ask`
+    already declines safely on missing context (ADR-006). Only total
+    failure — no space readable at all — is treated like Jira's: no chunks
+    indexed, not a silent revert to the sample pages.
+    """
+    from app.core.docs_runner import run_docs_load
+    from app.integrations.atlassian.confluence import ConfluenceClient
+
+    config = settings()
+    client = ConfluenceClient(
+        base_url=config.atlassian_base_url,
+        email=config.atlassian_email,
+        api_token=config.atlassian_api_token,
+    )
+    try:
+        load = await run_docs_load(
+            client,
+            list(config.confluence_space_keys),
+            labels=list(config.confluence_labels) or None,
+        )
+    except Exception as exc:
+        # run_docs_load handles per-space failures itself; reaching here means
+        # the run did not start at all — bad credentials, wrong base URL.
+        logger.exception("confluence load failed at startup")
+        services.retriever = HybridRetriever([], default_embedder(), candidate_pool=20)
+        services.docs_source = "confluence_unavailable"
+        services.docs_message = str(exc)
+        services.registry = build_registry(services.retriever, services.sync)
+        return
+    finally:
+        await client.aclose()
+
+    if load.is_empty:
+        services.retriever = HybridRetriever([], default_embedder(), candidate_pool=20)
+        services.docs_source = "confluence_unavailable"
+        services.docs_message = (
+            f"Could not read any pages from "
+            f"{', '.join(config.confluence_space_keys) or 'the configured spaces'}."
+        )
+        services.registry = build_registry(services.retriever, services.sync)
+        logger.warning("confluence load produced no pages: %s", services.docs_message)
+        return
+
+    chunks = [c for page in load.pages for c in chunk_page(page)]
+    services.retriever = HybridRetriever(chunks, default_embedder(), candidate_pool=20)
+    services.docs_source = "confluence" if load.is_complete else "confluence_partial"
+    services.docs_message = (
+        ""
+        if load.is_complete
+        else (
+            f"Could not read {', '.join(load.spaces_incomplete)}; some "
+            f"documentation may be missing."
+        )
+    )
+    services.registry = build_registry(services.retriever, services.sync)
+
+    if load.is_complete:
+        logger.info(
+            "confluence load complete: %d pages, %d chunks across %s",
+            len(load.pages), len(chunks), ", ".join(load.spaces_covered) or "no spaces",
+        )
+    else:
+        logger.warning("%s", services.docs_message)
 
 
 async def resync(services: Services) -> None:
@@ -409,6 +494,8 @@ def create_app(services: Services | None = None) -> FastAPI:
         app.state.services = services or build_services()
         if services is None and settings().has_jira:
             await load_live_findings(app.state.services)
+        if services is None and settings().has_confluence:
+            await load_live_docs(app.state.services)
         yield
 
     app = FastAPI(title="Delivery Copilot", lifespan=lifespan)
@@ -424,11 +511,12 @@ def create_app(services: Services | None = None) -> FastAPI:
             "missing_config": config.missing_for_live(),
             "chunks_indexed": len(svc.retriever.chunks),
             "findings_source": svc.findings_source,
-            # Always the bundled sample corpus. `ConfluenceClient` exists and is
-            # tested, but nothing wires it into the running service, so with a
-            # real Jira configured the two halves describe different worlds.
-            # Reported rather than left to be discovered mid-demo.
-            "docs_source": "bundled_corpus",
+            # "bundled_corpus" unless CONFLUENCE_SPACE_KEYS is set — the two
+            # data sources are configured, and can fail, independently.
+            # Reported rather than left to be discovered mid-demo, the same
+            # reason `sync_message` exists for the Jira half.
+            "docs_source": svc.docs_source,
+            "docs_message": svc.docs_message,
             # Non-zero means findings were evaluated against a future date, so
             # that stale detection has something to find on a sandbox no older
             # than the day it was seeded. Reported because a risk report

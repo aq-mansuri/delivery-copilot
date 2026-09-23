@@ -42,8 +42,21 @@ const examplesFor = (health) => [
  * approvals that never leave the process.
  */
 function caveats(health) {
-  if (!health || health.findings_source !== "jira") return [];
+  if (!health) return [];
   const out = [];
+
+  // These two fire regardless of whether Jira is live — a Confluence
+  // misconfiguration is real and actionable on its own, unlike the bundled
+  // corpus (the deliberate default, noise on a pure sandbox run).
+  if (health.docs_source === "confluence_unavailable")
+    out.push(
+      `Confluence could not be read${health.docs_message ? ` (${health.docs_message})` : ""} — documentation questions will find nothing.`,
+    );
+  else if (health.docs_source === "confluence_partial")
+    out.push(`${health.docs_message} Some documentation questions may find nothing.`);
+
+  if (health.findings_source !== "jira") return out;
+
   if (health.docs_source === "bundled_corpus")
     out.push(
       "Documentation answers come from the bundled sample corpus, not your Confluence.",

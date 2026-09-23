@@ -108,10 +108,14 @@ a client finds out during a demo. Full detail in [DEPLOY.md](DEPLOY.md).
   moves the evaluation clock forward rather than lowering the thresholds, which
   would ship numbers tuned to fake data. Off by default; `/health` and the UI
   both say when it is on.
-- **Documentation is always the bundled corpus.** `ConfluenceClient` is written
-  and tested but not wired into the service, so with `JIRA_PROJECT_KEYS` set the
-  risk panel shows your issues while documentation answers describe the sample
-  space. `/health` reports both sources and the UI says so.
+- **Documentation is the bundled corpus unless `CONFLUENCE_SPACE_KEYS` is set.**
+  Same shared credentials as Jira, independently scoped, and never mixed: a
+  load that fails completely serves no documentation rather than falling back
+  to the sample pages — the same rule Jira's failed-sync path already follows,
+  applied to the other half of the data. A partial load (one space unreadable)
+  still indexes what it got, unlike Jira, because a smaller real corpus isn't
+  the same danger as a smaller real risk-finding set (ADR-010). `/health`
+  reports `docs_source` and the UI says so.
 - **Approvals do not survive a restart.** `ApprovalStore` is in memory.
 - **Findings refresh only when asked.** `POST /sync` re-reads Jira and the UI
   shows how old the current read is, because there is no push from Jira and
