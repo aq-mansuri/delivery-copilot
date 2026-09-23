@@ -1,0 +1,98 @@
+{
+  "recorded_at": "2026-09-22T20:35:58.569260+00:00",
+  "reason": "quote normalisation: markdown pipes and literal \\n no longer read as fabrication; 6% of claims were being discarded",
+  "judge_model": "claude-haiku-4-5-20251001",
+  "metrics": {
+    "recall_at_5": {
+      "value": 0.625,
+      "name": "recall@5",
+      "tolerance": 0.0,
+      "direction": "higher_is_better",
+      "note": "retrieval is deterministic; any drop is a real regression",
+      "unit": "ratio",
+      "sampled": false,
+      "baseline_runs": 3
+    },
+    "cross_source_recall": {
+      "value": 1.0,
+      "name": "cross-source recall",
+      "tolerance": 0.0,
+      "direction": "higher_is_better",
+      "note": "",
+      "unit": "ratio",
+      "sampled": false,
+      "baseline_runs": 3
+    },
+    "identifier_recall": {
+      "value": 1.0,
+      "name": "identifier recall",
+      "tolerance": 0.0,
+      "direction": "higher_is_better",
+      "note": "BM25 half of the hybrid; a drop usually means the tokenizer",
+      "unit": "ratio",
+      "sampled": false,
+      "baseline_runs": 3
+    },
+    "groundedness_supported": {
+      "value": 0.852941,
+      "name": "supported claims",
+      "tolerance": 0.08,
+      "direction": "higher_is_better",
+      "note": "sampled metric; tolerance is the observed run-to-run swing",
+      "unit": "ratio",
+      "sampled": true,
+      "baseline_runs": 3
+    },
+    "groundedness_overreach": {
+      "value": 0.088235,
+      "name": "overreach",
+      "tolerance": 0.05,
+      "direction": "lower_is_better",
+      "note": "",
+      "unit": "ratio",
+      "sampled": true,
+      "baseline_runs": 3
+    },
+    "groundedness_unsupported": {
+      "value": 0.019608,
+      "name": "unsupported",
+      "tolerance": 0.03,
+      "direction": "lower_is_better",
+      "note": "the dangerous category \u2014 claims in no retrieved passage",
+      "unit": "ratio",
+      "sampled": true,
+      "baseline_runs": 3
+    },
+    "refusal_rate": {
+      "value": 1.0,
+      "name": "refusal on unanswerable",
+      "tolerance": 0.0,
+      "direction": "higher_is_better",
+      "note": "not drift \u2014 a system answering what it cannot answer is broken",
+      "unit": "ratio",
+      "sampled": false,
+      "baseline_runs": 3
+    },
+    "cost_per_answer": {
+      "value": 0.005227,
+      "name": "cost per answer",
+      "tolerance": 0.004,
+      "direction": "lower_is_better",
+      "note": "what the client pays per question",
+      "unit": "usd",
+      "sampled": true,
+      "baseline_runs": 3
+    },
+    "cost_per_eval": {
+      "value": 0.014986,
+      "name": "cost per evaluated question",
+      "tolerance": 0.015,
+      "direction": "lower_is_better",
+      "note": "answering plus claim-level judging; what CI pays per commit",
+      "unit": "usd",
+      "sampled": true,
+      "baseline_runs": 3
+    }
+  },
+  "_note": "Source of truth for regression checks. Re-baseline only for intended changes and say why in `reason`. A baseline updated to silence a failure measures nothing. Never widen a tolerance to make a failure go away \u2014 tolerances come from observed run-to-run spread."
+}

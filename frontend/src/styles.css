@@ -1,0 +1,38 @@
+/*
+  Tailwind utilities, plus the handful of tokens the whole page shares.
+
+  Colour still carries product meaning, not just section identity:
+
+  - Refusals are slate, never red. A refusal is the system working correctly;
+    colouring it as an error teaches leads that the safe behaviour is a
+    malfunction.
+  - Amber appears only where a human is being asked for attention — a pending
+    approval, or a banner that changes what the numbers mean (the demo clock,
+    a stale sync) — never as decoration.
+
+  Everything else is free to differ by section, and now does: each major
+  section (Ask, Weekly Summary, Waiting on you, Decisions) gets its own accent
+  from Tailwind's palette, so a reader can tell which part of the page they
+  are in without reading the heading. Citations stay teal everywhere — a
+  citation is the same kind of thing regardless of which section it appears
+  in, and splitting that by section would make the one truly cross-cutting
+  affordance harder to recognise, not easier.
+*/
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #fbfaf7;
+  --color-ink: #14181f;
+  --color-rule: #e4e3de;
+  --color-wash: #f2f1ec;
+  --font-serif: Charter, "Iowan Old Style", "Source Serif 4", Georgia, serif;
+}
+
+@layer base {
+  body {
+    @apply bg-paper font-sans text-[15px] leading-normal text-ink antialiased;
+  }
+  :focus-visible {
+    @apply outline outline-2 outline-offset-1 outline-indigo-600;
+  }
+}

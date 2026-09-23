@@ -1,0 +1,41 @@
+# Local run. Secrets come from the environment, never from this file — a
+# compose file with a key in it is a key in git history.
+#
+#   cp .env.example .env    # fill in ANTHROPIC_API_KEY
+#   docker compose up --build
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY in .env}
+      VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
+      ATLASSIAN_BASE_URL: ${ATLASSIAN_BASE_URL:-}
+      ATLASSIAN_EMAIL: ${ATLASSIAN_EMAIL:-}
+      ATLASSIAN_API_TOKEN: ${ATLASSIAN_API_TOKEN:-}
+      JIRA_TARGET_RELEASE_FIELD: ${JIRA_TARGET_RELEASE_FIELD:-}
+      # Missing here for a while: `settings().has_jira` needs ALL of the
+      # Atlassian vars above PLUS this one, and a container built without it
+      # falls back to the offline sandbox tenant with no error and no warning
+      # — /health said "findings_source": "sandbox" the whole time, which is
+      # the one field that would have caught it.
+      JIRA_PROJECT_KEYS: ${JIRA_PROJECT_KEYS:-}
+      JIRA_ALLOW_WRITES: ${JIRA_ALLOW_WRITES:-}
+      RISK_CLOCK_OFFSET_DAYS: ${RISK_CLOCK_OFFSET_DAYS:-}
+    restart: unless-stopped
+
+  # Postgres is not wired in yet: ApprovalStore and the vector index are both
+  # in memory, so approvals are lost on restart. That is a real limitation and
+  # the next thing to fix, not something to hide behind a running container.
+  #
+  # db:
+  #   image: pgvector/pgvector:pg16
+  #   environment:
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #
+  # volumes:
+  #   pgdata:

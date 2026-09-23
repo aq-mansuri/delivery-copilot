@@ -1,0 +1,1 @@
+from app.rag.embedders import VOCABULARY, FakeEmbedder  # noqa: F401

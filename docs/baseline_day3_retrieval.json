@@ -1,0 +1,18 @@
+{
+  "k": 5,
+  "recall": 0.5625,
+  "mrr": 0.4739583333333333,
+  "by_category": {
+    "identifier": 1.0,
+    "prose": 1.0,
+    "semantic": 0.6666666666666666,
+    "cross_source": 0.5,
+    "temporal": 1.0,
+    "ambiguous": 1.0,
+    "negative": 0.0
+  },
+  "negatives_declined": 0,
+  "negatives_total": 5,
+  "_note": "HISTORICAL SNAPSHOT \u2014 retrieval scores recorded on Day 3, BEFORE query decomposition and before the citation-label fix. Its entire value is that it predates those changes. Do not regenerate it. Live regression thresholds live in docs/regression_baseline.json.",
+  "recorded": "day 3, pre-decomposition"
+}

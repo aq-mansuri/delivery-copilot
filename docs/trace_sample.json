@@ -1,0 +1,219 @@
+{
+  "trace_id": "a437a7f7c607",
+  "question": "What is the status of the Acme work and are there contractual risks?",
+  "started_at": "2026-09-22T17:02:59.151206+00:00",
+  "wall_ms": 10287.9,
+  "cost_usd": 0.02673,
+  "input_tokens": 5285,
+  "output_tokens": 725,
+  "spans": [
+    {
+      "name": "answer_question",
+      "kind": "node",
+      "span_id": "e0aff4d59c32",
+      "parent_id": null,
+      "duration_ms": 10287.94,
+      "self_ms": 0.13,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "attributes": {
+        "question": "What is the status of the Acme work and are there contractual risks?"
+      },
+      "error": ""
+    },
+    {
+      "name": "retrieve",
+      "kind": "retrieval",
+      "span_id": "d736c819ffea",
+      "parent_id": "e0aff4d59c32",
+      "duration_ms": 3.85,
+      "self_ms": 3.85,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "attributes": {
+        "chunks_indexed": 20,
+        "subqueries": 2,
+        "passages": 5
+      },
+      "error": ""
+    },
+    {
+      "name": "llm.complete",
+      "kind": "llm",
+      "span_id": "e54d8ef24f90",
+      "parent_id": "e0aff4d59c32",
+      "duration_ms": 5885.96,
+      "self_ms": 5885.96,
+      "input_tokens": 1095,
+      "output_tokens": 293,
+      "cost_usd": 0.00768,
+      "attributes": {
+        "tool_count": 0,
+        "max_tokens": 1000,
+        "stop_reason": "end_turn",
+        "tool_uses": 0
+      },
+      "error": ""
+    },
+    {
+      "name": "judge_answer",
+      "kind": "node",
+      "span_id": "a0fcf5fce6ed",
+      "parent_id": "e0aff4d59c32",
+      "duration_ms": 4398.0,
+      "self_ms": 0.0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost_usd": 0.0,
+      "attributes": {},
+      "error": ""
+    },
+    {
+      "name": "llm.complete",
+      "kind": "judge",
+      "span_id": "6f7b3acf99d1",
+      "parent_id": "a0fcf5fce6ed",
+      "duration_ms": 2778.27,
+      "self_ms": 2778.27,
+      "input_tokens": 548,
+      "output_tokens": 44,
+      "cost_usd": 0.002304,
+      "attributes": {
+        "tool_count": 0,
+        "max_tokens": 300,
+        "stop_reason": "end_turn",
+        "tool_uses": 0
+      },
+      "error": ""
+    },
+    {
+      "name": "llm.complete",
+      "kind": "judge",
+      "span_id": "924c59a3db59",
+      "parent_id": "a0fcf5fce6ed",
+      "duration_ms": 2163.13,
+      "self_ms": 2163.13,
+      "input_tokens": 545,
+      "output_tokens": 48,
+      "cost_usd": 0.002355,
+      "attributes": {
+        "tool_count": 0,
+        "max_tokens": 300,
+        "stop_reason": "end_turn",
+        "tool_uses": 0
+      },
+      "error": ""
+    },
+    {
+      "name": "llm.complete",
+      "kind": "judge",
+      "span_id": "ba71298d7262",
+      "parent_id": "a0fcf5fce6ed",
+      "duration_ms": 2308.62,
+      "self_ms": 2308.62,
+      "input_tokens": 551,
+      "output_tokens": 55,
+      "cost_usd": 0.002478,
+      "attributes": {
+        "tool_count": 0,
+        "max_tokens": 300,
+        "stop_reason": "end_turn",
+        "tool_uses": 0
+      },
+      "error": ""
+    },
+    {
+      "name": "llm.complete",
+      "kind": "judge",
+      "span_id": "fe5c7b7789ff",
+      "parent_id": "a0fcf5fce6ed",
+      "duration_ms": 2426.4,
+      "self_ms": 2426.4,
+      "input_tokens": 512,
+      "output_tokens": 62,
+      "cost_usd": 0.002466,
+      "attributes": {
+        "tool_count": 0,
+        "max_tokens": 300,
+        "stop_reason": "end_turn",
+        "tool_uses": 0
+      },
+      "error": ""
+    },
+    {
+      "name": "llm.complete",
+      "kind": "judge",
+      "span_id": "646c621001ba",
+      "parent_id": "a0fcf5fce6ed",
+      "duration_ms": 2834.33,
+      "self_ms": 2834.33,
+      "input_tokens": 530,
+      "output_tokens": 84,
+      "cost_usd": 0.00285,
+      "attributes": {
+        "tool_count": 0,
+        "max_tokens": 300,
+        "stop_reason": "end_turn",
+        "tool_uses": 0
+      },
+      "error": ""
+    },
+    {
+      "name": "llm.complete",
+      "kind": "judge",
+      "span_id": "4705738e0e92",
+      "parent_id": "a0fcf5fce6ed",
+      "duration_ms": 2281.11,
+      "self_ms": 2281.11,
+      "input_tokens": 493,
+      "output_tokens": 43,
+      "cost_usd": 0.002124,
+      "attributes": {
+        "tool_count": 0,
+        "max_tokens": 300,
+        "stop_reason": "end_turn",
+        "tool_uses": 0
+      },
+      "error": ""
+    },
+    {
+      "name": "llm.complete",
+      "kind": "judge",
+      "span_id": "d7b1b3a08e4f",
+      "parent_id": "a0fcf5fce6ed",
+      "duration_ms": 2232.94,
+      "self_ms": 2232.94,
+      "input_tokens": 503,
+      "output_tokens": 40,
+      "cost_usd": 0.002109,
+      "attributes": {
+        "tool_count": 0,
+        "max_tokens": 300,
+        "stop_reason": "end_turn",
+        "tool_uses": 0
+      },
+      "error": ""
+    },
+    {
+      "name": "llm.complete",
+      "kind": "judge",
+      "span_id": "0d221b8ce6d2",
+      "parent_id": "a0fcf5fce6ed",
+      "duration_ms": 1925.63,
+      "self_ms": 1925.63,
+      "input_tokens": 508,
+      "output_tokens": 56,
+      "cost_usd": 0.002364,
+      "attributes": {
+        "tool_count": 0,
+        "max_tokens": 300,
+        "stop_reason": "end_turn",
+        "tool_uses": 0,
+        "claims": 8
+      },
+      "error": ""
+    }
+  ]
+}

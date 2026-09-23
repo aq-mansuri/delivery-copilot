@@ -1,0 +1,53 @@
+{
+  "_readme": [
+    "Retrieval ground truth. Write these against YOUR sandbox, not from imagination.",
+    "Target 25+ cases. The categories below are not optional decoration — an 80%",
+    "aggregate can be 100% on prose and 20% on identifier lookups, and only the",
+    "breakdown tells you which.",
+    "",
+    "Categories to cover, roughly evenly:",
+    "  identifier  - contains a ticket key, vendor name, or exact term (INS-101, Acme)",
+    "  semantic    - paraphrase; the target page never uses the query's words",
+    "  temporal    - 'what changed', 'latest version of', 'last quarter'",
+    "  negative    - a question the corpus genuinely cannot answer. The system must",
+    "                retrieve nothing relevant rather than confidently citing the",
+    "                nearest page. Skipping these is how you ship a system that",
+    "                never says 'I don't know'.",
+    "  ambiguous   - matches several pages; all valid targets go in relevant_page_ids",
+    "",
+    "Ground truth is PAGE ids, not chunk ids — chunk boundaries move every time you",
+    "touch the chunker, and an eval set that breaks on every tweak stops being run."
+  ],
+  "cases": [
+    {
+      "question": "What is blocking INS-101?",
+      "relevant_page_ids": ["sprint-13-notes"],
+      "category": "identifier",
+      "note": "Embeddings are weak on exact keys; this case exists to prove BM25 is carrying its half."
+    },
+    {
+      "question": "Why did we decide to terminate TLS at the gateway?",
+      "relevant_page_ids": ["adr-claims-vendor-tls"],
+      "category": "semantic",
+      "note": "The ADR never uses the word 'why'."
+    },
+    {
+      "question": "Who has to sign off before the claims integration goes live?",
+      "relevant_page_ids": ["adr-claims-vendor-tls", "compliance-checklist"],
+      "category": "ambiguous",
+      "must_not_retrieve": ["onboarding-guide"],
+      "note": "Two valid sources. Onboarding guide mentions 'sign off' in an unrelated sense."
+    },
+    {
+      "question": "What is our parental leave policy?",
+      "relevant_page_ids": [],
+      "category": "negative",
+      "note": "Not in the ARCH space. System must decline, not cite the nearest HR-ish page."
+    },
+    {
+      "question": "What changed in the vendor contract most recently?",
+      "relevant_page_ids": ["vendor-contract-acme"],
+      "category": "temporal"
+    }
+  ]
+}
